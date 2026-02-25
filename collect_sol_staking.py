@@ -149,9 +149,11 @@ def epoch_to_approximate_date(epoch, current_epoch, current_date):
 
 def fetch_sol_price_history(days=1100):
     """Fetch SOL price history from CoinGecko."""
+    prices = {}
+    
+    # 1. Bulk history with daily interval
     print(f"Fetching SOL price history ({days} days)...")
     url = f"{COINGECKO_API}/coins/solana/market_chart?vs_currency=usd&days={days}&interval=daily"
-    
     try:
         req = urllib.request.Request(url, headers={
             'Accept': 'application/json',
@@ -159,31 +161,40 @@ def fetch_sol_price_history(days=1100):
         })
         with urllib.request.urlopen(req, timeout=30) as resp:
             data = json.loads(resp.read().decode('utf-8'))
-            prices = {}
             for ts, price in data.get('prices', []):
                 date_str = datetime.fromtimestamp(ts / 1000, tz=timezone.utc).strftime('%Y-%m-%d')
                 prices[date_str] = round(price, 2)
-            print(f"Got {len(prices)} price data points")
+            print(f"  Bulk: {len(prices)} daily prices")
     except Exception as e:
-        print(f"CoinGecko history fetch failed: {e}")
-        prices = {}
+        print(f"  Bulk fetch failed: {e}")
     
-    # Also fetch current price to fill today/yesterday gaps
+    # 2. Recent 30 days WITHOUT interval param (gives hourly, pick last per day)
+    print("Fetching recent 30-day granular prices...")
+    url2 = f"{COINGECKO_API}/coins/solana/market_chart?vs_currency=usd&days=30"
+    try:
+        req = urllib.request.Request(url2, headers={
+            'Accept': 'application/json',
+            'User-Agent': 'HerdVibe-Collector/1.0'
+        })
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = json.loads(resp.read().decode('utf-8'))
+            recent = {}
+            for ts, price in data.get('prices', []):
+                date_str = datetime.fromtimestamp(ts / 1000, tz=timezone.utc).strftime('%Y-%m-%d')
+                recent[date_str] = round(price, 2)  # last entry per day wins
+            # Overwrite bulk with more accurate recent data
+            prices.update(recent)
+            print(f"  Recent: {len(recent)} days updated")
+    except Exception as e:
+        print(f"  Recent fetch failed: {e}")
+    
+    # 3. Current price for today
     current_price = fetch_sol_current_price()
     if current_price:
         today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
         prices[today] = current_price
-        # Fill recent gaps with last known price
-        from datetime import timedelta
-        last_price = current_price
-        for i in range(7):
-            d = (datetime.now(timezone.utc) - timedelta(days=i)).strftime('%Y-%m-%d')
-            if d not in prices:
-                prices[d] = last_price
-                print(f"  Filled gap {d} with ${last_price}")
-            else:
-                last_price = prices[d]
     
+    print(f"  Total: {len(prices)} price points")
     return prices
 
 
@@ -199,10 +210,10 @@ def fetch_sol_current_price():
             data = json.loads(resp.read().decode('utf-8'))
             price = data.get('solana', {}).get('usd', 0)
             if price:
-                print(f"Current SOL price: ${price}")
+                print(f"  Current SOL price: ${price}")
                 return round(price, 2)
     except Exception as e:
-        print(f"Current price fetch failed: {e}")
+        print(f"  Current price fetch failed: {e}")
     return None
 
 
