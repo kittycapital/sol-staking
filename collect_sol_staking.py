@@ -164,10 +164,46 @@ def fetch_sol_price_history(days=1100):
                 date_str = datetime.fromtimestamp(ts / 1000, tz=timezone.utc).strftime('%Y-%m-%d')
                 prices[date_str] = round(price, 2)
             print(f"Got {len(prices)} price data points")
-            return prices
     except Exception as e:
-        print(f"CoinGecko fetch failed: {e}")
-        return {}
+        print(f"CoinGecko history fetch failed: {e}")
+        prices = {}
+    
+    # Also fetch current price to fill today/yesterday gaps
+    current_price = fetch_sol_current_price()
+    if current_price:
+        today = datetime.now(timezone.utc).strftime('%Y-%m-%d')
+        prices[today] = current_price
+        # Fill recent gaps with last known price
+        from datetime import timedelta
+        last_price = current_price
+        for i in range(7):
+            d = (datetime.now(timezone.utc) - timedelta(days=i)).strftime('%Y-%m-%d')
+            if d not in prices:
+                prices[d] = last_price
+                print(f"  Filled gap {d} with ${last_price}")
+            else:
+                last_price = prices[d]
+    
+    return prices
+
+
+def fetch_sol_current_price():
+    """Fetch current SOL price from CoinGecko simple/price endpoint."""
+    url = f"{COINGECKO_API}/simple/price?ids=solana&vs_currencies=usd"
+    try:
+        req = urllib.request.Request(url, headers={
+            'Accept': 'application/json',
+            'User-Agent': 'HerdVibe-Collector/1.0'
+        })
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            data = json.loads(resp.read().decode('utf-8'))
+            price = data.get('solana', {}).get('usd', 0)
+            if price:
+                print(f"Current SOL price: ${price}")
+                return round(price, 2)
+    except Exception as e:
+        print(f"Current price fetch failed: {e}")
+    return None
 
 
 def load_existing_data():
