@@ -409,11 +409,19 @@ function calcZScores(data,window){
   return zs;
 }
 function updateZScoreChart(){
-  var fd=getFilteredData(zRange);
-  var labels=fd.map(function(d){return d.date;});
-  var rawNf=fd.map(function(d){return d.netFlow||(d.activating||0)-(d.deactivating||0);});
-  var zData=calcZScores(rawNf,90);
-  var priceData=fd.map(function(d){return d.solPrice;});
+  if(!DATA||!DATA.data)return;
+  // Calculate Z-scores on FULL dataset first
+  var allNf=DATA.data.map(function(d){return d.netFlow||(d.activating||0)-(d.deactivating||0);});
+  var allZ=calcZScores(allNf,90);
+  var fullWithZ=DATA.data.map(function(d,i){return{date:d.date,z:allZ[i],solPrice:d.solPrice};});
+  // Then filter by date range
+  var filtered;
+  if(zRange==='all'){filtered=fullWithZ;}
+  else{var days=parseInt(zRange),cut=new Date();cut.setDate(cut.getDate()-days);var start=cut.toISOString().split('T')[0];filtered=fullWithZ.filter(function(d){return d.date>=start;});}
+
+  var labels=filtered.map(function(d){return d.date;});
+  var zData=filtered.map(function(d){return d.z;});
+  var priceData=filtered.map(function(d){return d.solPrice;});
   var hasPrice=priceData.some(function(p){return p>0;});
   if(zscoreChart)zscoreChart.destroy();
 
