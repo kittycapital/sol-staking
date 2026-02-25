@@ -252,7 +252,7 @@ a{color:var(--hv-primary-light);text-decoration:none}
 
 <script>
 /* ===== SHARE CONFIG ===== */
-var SHARE_URL='https://herdvibe.com/42';
+var SHARE_URL='https://herdvibe.com/101';
 var SHARE_TITLE='솔라나 스테이킹 큐 분석기';
 var SHARE_DESC='Exit/Activating vs SOL Price 실시간 분석';
 var OG_IMAGE='https://raw.githubusercontent.com/kittycapital/kittycapital.github.io/main/assets/herdvibe-og.png';
@@ -355,7 +355,7 @@ setupTabs('entryTabs',function(r){entryRange=r;updateEntryChart();});
 
 /* ===== IFRAME RESIZE ===== */
 var _lastH=0,_ht;
-function sendHeight(){clearTimeout(_ht);_ht=setTimeout(function(){var h=document.body.offsetHeight;if(Math.abs(h-_lastH)>5){_lastH=h;window.parent.postMessage({type:'resize',height:h},'*');}},150);}
+function sendHeight(){clearTimeout(_ht);_ht=setTimeout(function(){var h=document.body.offsetHeight;if(Math.abs(h-_lastH)>5){_lastH=h;window.parent.postMessage({type:'resize',height:h,frameId:'solStaking'},'*');}},150);}
 window.addEventListener('resize',sendHeight);
 window.addEventListener('load',function(){sendHeight();setTimeout(sendHeight,500);setTimeout(sendHeight,1500);});
 new MutationObserver(sendHeight).observe(document.body,{childList:true,subtree:true});
