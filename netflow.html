@@ -259,7 +259,7 @@ a{color:var(--hv-primary-light);text-decoration:none}
 
 <script>
 /* ===== SHARE CONFIG ===== */
-var SHARE_URL='https://herdvibe.com/42';
+var SHARE_URL='https://herdvibe.com/101';
 var SHARE_TITLE='SOL Net Flow & 변곡점 분석';
 var SHARE_DESC='Net Staking Flow 및 주요 변곡점 실시간 분석';
 var OG_IMAGE='https://raw.githubusercontent.com/kittycapital/kittycapital.github.io/main/assets/herdvibe-og.png';
@@ -547,7 +547,7 @@ setupTabs('sentiTabs',function(r){sentiRange=r;updateSentimentChart();});
 
 /* ===== IFRAME RESIZE ===== */
 var _lastH=0,_ht;
-function sendHeight(){clearTimeout(_ht);_ht=setTimeout(function(){var h=document.body.offsetHeight;if(Math.abs(h-_lastH)>5){_lastH=h;window.parent.postMessage({type:'resize',height:h},'*');}},150);}
+function sendHeight(){clearTimeout(_ht);_ht=setTimeout(function(){var h=document.body.offsetHeight;if(Math.abs(h-_lastH)>5){_lastH=h;window.parent.postMessage({type:'resize',height:h,frameId:'solNetflow'},'*');}},150);}
 window.addEventListener('resize',sendHeight);
 window.addEventListener('load',function(){sendHeight();setTimeout(sendHeight,500);setTimeout(sendHeight,1500);});
 new MutationObserver(sendHeight).observe(document.body,{childList:true,subtree:true});
