@@ -90,6 +90,14 @@ a{color:var(--hv-primary-light);text-decoration:none}
 .badge-trough{background:rgba(66,255,140,.08);color:var(--green);border:1px solid rgba(66,255,140,.15)}
 .loading{text-align:center;padding:32px;color:var(--hv-text-muted);font-size:13px}
 
+/* SENTIMENT GAUGE */
+.sentiment-gauge{text-align:center;padding:10px 0}
+.gauge-value{font-family:var(--hv-font-display);font-size:56px;font-weight:800;line-height:1}
+.gauge-label{font-family:var(--hv-font-mono);font-size:12px;margin:6px 0 14px;color:var(--hv-text-secondary)}
+.gauge-bar-wrap{height:8px;background:rgba(255,255,255,0.06);border-radius:4px;overflow:hidden;position:relative;margin:0 20px}
+.gauge-bar{height:100%;border-radius:4px;transition:width .8s ease,background .5s ease;width:0}
+.gauge-scale{display:flex;justify-content:space-between;margin:6px 20px 0;font-family:var(--hv-font-mono);font-size:9px;color:var(--hv-text-muted)}
+
 /* SHARE BAR */
 .share-bar{display:flex;align-items:center;justify-content:space-between;padding:12px var(--hv-space-lg);border-top:1px solid var(--hv-border);background:var(--hv-bg-surface);border-radius:0 0 var(--hv-radius-lg) var(--hv-radius-lg)}
 .share-bar-preview{font-size:.75rem;color:var(--hv-text-tertiary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:50%;line-height:1.4;font-family:var(--hv-font-mono)}
@@ -157,7 +165,7 @@ a{color:var(--hv-primary-light);text-decoration:none}
     <!-- NET FLOW CHART -->
     <div class="card s7" id="netflowCard">
       <div class="card-label">NET STAKING FLOW</div>
-      <div class="card-title">Net Flow (Entry − Exit)</div>
+      <div class="card-title">Net Flow (Activating − Deactivating)</div>
       <div class="card-desc">순유입(초록) = 강세, 순유출(빨강) = 매도 압력 증가</div>
       <div class="tabs" id="flowTabs">
         <div class="tab" data-range="30">30D</div>
@@ -173,9 +181,62 @@ a{color:var(--hv-primary-light);text-decoration:none}
     <div class="card s5" id="inflectionCard">
       <div class="card-label">KEY INFLECTION POINTS</div>
       <div class="card-title">주요 변곡점</div>
-      <div class="card-desc">Exit Queue 급등/급감 포인트 — 가격 전환 신호</div>
+      <div class="card-desc">Net Flow 급등/급감 포인트 — 가격 전환 신호</div>
       <div class="inflection-list" id="inflectionList">
         <div class="loading">Loading...</div>
+      </div>
+    </div>
+
+    <!-- NET FLOW % -->
+    <div class="card s12" id="pctCard">
+      <div class="card-label">NET FLOW RATIO</div>
+      <div class="card-title">Net Flow / 전체 스테이크 비율 (%)</div>
+      <div class="card-desc">전체 활성 스테이크 대비 순유입/유출 비율 — 절대량보다 상대적 크기가 중요</div>
+      <div class="tabs" id="pctTabs">
+        <div class="tab" data-range="30">30D</div>
+        <div class="tab" data-range="90">90D</div>
+        <div class="tab" data-range="180">180D</div>
+        <div class="tab active" data-range="365">1Y</div>
+        <div class="tab" data-range="all">ALL</div>
+      </div>
+      <div class="chart-wrap"><canvas id="pctChart"></canvas></div>
+    </div>
+
+    <!-- Z-SCORE -->
+    <div class="card s7" id="zscoreCard">
+      <div class="card-label">Z-SCORE SIGNAL</div>
+      <div class="card-title">Net Flow Z-Score (90일 기준)</div>
+      <div class="card-desc">평균 대비 표준편차 — <span style="color:#ff4a6a">±2σ</span> 초과 시 이상 신호 감지</div>
+      <div class="tabs" id="zTabs">
+        <div class="tab" data-range="90">90D</div>
+        <div class="tab" data-range="180">180D</div>
+        <div class="tab active" data-range="365">1Y</div>
+        <div class="tab" data-range="all">ALL</div>
+      </div>
+      <div class="chart-wrap"><canvas id="zscoreChart"></canvas></div>
+    </div>
+
+    <!-- SENTIMENT INDEX -->
+    <div class="card s5" id="sentimentCard">
+      <div class="card-label">STAKING SENTIMENT INDEX</div>
+      <div class="card-title">스테이킹 센티먼트 지수</div>
+      <div class="card-desc">Activating ÷ (Activating + Deactivating) × 100<br>50 이상 = 강세, 50 이하 = 약세</div>
+      <div class="sentiment-gauge" id="sentimentGauge">
+        <div class="gauge-value" id="gaugeValue">--</div>
+        <div class="gauge-label" id="gaugeLabel">Loading...</div>
+        <div class="gauge-bar-wrap">
+          <div class="gauge-bar" id="gaugeBar"></div>
+        </div>
+        <div class="gauge-scale"><span>0 — 극약세</span><span>50 — 중립</span><span>100 — 극강세</span></div>
+      </div>
+      <div style="margin-top:14px">
+        <div class="tabs" id="sentiTabs">
+          <div class="tab" data-range="90">90D</div>
+          <div class="tab" data-range="180">180D</div>
+          <div class="tab active" data-range="365">1Y</div>
+          <div class="tab" data-range="all">ALL</div>
+        </div>
+        <div class="chart-wrap" style="height:240px"><canvas id="sentimentChart"></canvas></div>
       </div>
     </div>
 
@@ -234,7 +295,7 @@ function formatNumber(num){if(Math.abs(num)>=1e6)return(num/1e6).toFixed(2)+'M';
 function formatNumberSigned(num){return(num>=0?'+':'')+formatNumber(num);}
 
 async function loadData(){
-  try{var r=await fetch('./data/sol_staking_data.json');if(!r.ok)throw new Error('Data file not found');DATA=await r.json();updateInflectionPoints();updateNetFlowChart();if(DATA.meta&&DATA.meta.lastUpdated)document.getElementById('lastUpdated').textContent=DATA.meta.lastUpdated;}
+  try{var r=await fetch('./data/sol_staking_data.json');if(!r.ok)throw new Error('Data file not found');DATA=await r.json();updateInflectionPoints();updateNetFlowChart();updatePctChart();updateZScoreChart();updateSentimentGauge();updateSentimentChart();if(DATA.meta&&DATA.meta.lastUpdated)document.getElementById('lastUpdated').textContent=DATA.meta.lastUpdated;}
   catch(e){document.getElementById('errorMsg').style.display='block';document.getElementById('errorMsg').textContent='데이터 로드 실패: '+e.message;}
 }
 
@@ -292,6 +353,189 @@ function updateNetFlowChart(){
 /* TABS */
 function setupTabs(containerId,callback){var c=document.getElementById(containerId);if(!c)return;c.querySelectorAll('.tab').forEach(function(t){t.addEventListener('click',function(){c.querySelectorAll('.tab').forEach(function(x){x.classList.remove('active');});t.classList.add('active');callback(t.dataset.range);});});}
 setupTabs('flowTabs',function(r){flowRange=r;updateNetFlowChart();});
+
+/* ===== PCT CHART ===== */
+var pctChart=null,pctRange='365';
+function updatePctChart(){
+  var fd=getFilteredData(pctRange);
+  var labels=fd.map(function(d){return d.date;});
+  var pctData=fd.map(function(d){
+    var eff=d.effective||1;
+    return+((d.netFlow/eff)*100).toFixed(4);
+  });
+  var priceData=fd.map(function(d){return d.solPrice;});
+  var hasPrice=priceData.some(function(p){return p>0;});
+  if(pctChart)pctChart.destroy();
+
+  var posData=pctData.map(function(v){return v>=0?v:0;});
+  var negData=pctData.map(function(v){return v<0?v:0;});
+
+  var ds=[
+    {label:'순유입 %',data:posData,borderColor:COLORS.green,backgroundColor:'rgba(66,255,140,0.12)',fill:'origin',yAxisID:'y',tension:0.3,pointRadius:0,borderWidth:1.5},
+    {label:'순유출 %',data:negData,borderColor:COLORS.red,backgroundColor:'rgba(255,74,106,0.12)',fill:'origin',yAxisID:'y',tension:0.3,pointRadius:0,borderWidth:1.5}
+  ];
+  if(hasPrice)ds.push({label:'SOL Price',data:priceData,borderColor:COLORS.purple,backgroundColor:'transparent',fill:false,yAxisID:'y1',tension:0.3,pointRadius:0,borderWidth:2});
+
+  pctChart=new Chart(document.getElementById('pctChart').getContext('2d'),{
+    type:'line',data:{labels:labels,datasets:ds},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{labels:{color:'#6e6e88',boxWidth:10,padding:12,font:{size:10}}},
+        tooltip:{backgroundColor:'rgba(10,10,10,0.95)',titleColor:'#e5e5e5',bodyColor:'#8a8a8a',borderColor:'rgba(255,255,255,0.08)',borderWidth:1,cornerRadius:6,padding:10,
+          callbacks:{label:function(ctx){if(ctx.datasetIndex===2)return'Price: $'+ctx.raw.toLocaleString();var idx=ctx.dataIndex;var actual=pctData[idx];return'Net Flow: '+(actual>=0?'+':'')+actual.toFixed(3)+'%';},
+            filter:function(ti){if(ti.datasetIndex===2)return true;return ti.datasetIndex===0?pctData[ti.dataIndex]>=0:pctData[ti.dataIndex]<0;}}}},
+      scales:{x:{...baseScaleOpts,ticks:{...baseScaleOpts.ticks,color:'#555'}},
+        y:{...baseScaleOpts,position:'left',
+          grid:{color:function(c){return c.tick.value===0?'rgba(255,255,255,0.15)':gridColor;},lineWidth:function(c){return c.tick.value===0?2:1;}},
+          ticks:{...baseScaleOpts.ticks,color:'#888',callback:function(v){return(v>=0?'+':'')+v.toFixed(2)+'%';}},title:{display:true,text:'Net Flow / Effective Stake (%)',color:'#888',font:{size:10}}},
+        y1:{...baseScaleOpts,position:'right',grid:{drawOnChartArea:false},ticks:{...baseScaleOpts.ticks,color:COLORS.purple,callback:function(v){return'$'+v.toLocaleString();}},title:{display:true,text:'SOL Price',color:COLORS.purple,font:{size:10}}}}
+    }
+  });
+  sendHeight();
+}
+setupTabs('pctTabs',function(r){pctRange=r;updatePctChart();});
+
+/* ===== Z-SCORE CHART ===== */
+var zscoreChart=null,zRange='365';
+function calcZScores(data,window){
+  var zs=[];
+  for(var i=0;i<data.length;i++){
+    if(i<window){zs.push(0);continue;}
+    var slice=data.slice(i-window,i);
+    var mean=slice.reduce(function(a,b){return a+b;},0)/slice.length;
+    var variance=slice.reduce(function(a,b){return a+(b-mean)*(b-mean);},0)/slice.length;
+    var std=Math.sqrt(variance);
+    zs.push(std>0?(data[i]-mean)/std:0);
+  }
+  return zs;
+}
+function updateZScoreChart(){
+  var fd=getFilteredData(zRange);
+  var labels=fd.map(function(d){return d.date;});
+  var rawNf=fd.map(function(d){return d.netFlow||(d.activating||0)-(d.deactivating||0);});
+  var zData=calcZScores(rawNf,90);
+  var priceData=fd.map(function(d){return d.solPrice;});
+  var hasPrice=priceData.some(function(p){return p>0;});
+  if(zscoreChart)zscoreChart.destroy();
+
+  // Color per point: red if |z|>2, yellow if |z|>1, else cyan
+  var pointBg=zData.map(function(z){return Math.abs(z)>=2?'#ff4a6a':Math.abs(z)>=1?'#ffd642':'#00e5cc';});
+  var barBg=zData.map(function(z){return Math.abs(z)>=2?'rgba(255,74,106,0.5)':Math.abs(z)>=1?'rgba(255,214,66,0.25)':'rgba(0,229,204,0.15)';});
+
+  var ds=[
+    {label:'Z-Score',data:zData,type:'bar',backgroundColor:barBg,borderColor:barBg,yAxisID:'y',borderWidth:0,barPercentage:1,categoryPercentage:1}
+  ];
+  if(hasPrice)ds.push({label:'SOL Price',data:priceData,type:'line',borderColor:COLORS.purple,backgroundColor:'transparent',fill:false,yAxisID:'y1',tension:0.3,pointRadius:0,borderWidth:2});
+
+  zscoreChart=new Chart(document.getElementById('zscoreChart').getContext('2d'),{
+    type:'bar',data:{labels:labels,datasets:ds},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{labels:{color:'#6e6e88',boxWidth:10,padding:12,font:{size:10}}},
+        tooltip:{backgroundColor:'rgba(10,10,10,0.95)',titleColor:'#e5e5e5',bodyColor:'#8a8a8a',borderColor:'rgba(255,255,255,0.08)',borderWidth:1,cornerRadius:6,padding:10,
+          callbacks:{label:function(ctx){return ctx.datasetIndex===0?'Z-Score: '+ctx.raw.toFixed(2)+'σ':'Price: $'+ctx.raw.toLocaleString();}}}},
+      scales:{x:{...baseScaleOpts,ticks:{...baseScaleOpts.ticks,color:'#555'}},
+        y:{...baseScaleOpts,position:'left',
+          grid:{color:function(c){return c.tick.value===0?'rgba(255,255,255,0.15)':gridColor;},lineWidth:function(c){return c.tick.value===0?2:1;}},
+          ticks:{...baseScaleOpts.ticks,color:'#888',callback:function(v){return v.toFixed(1)+'σ';}},title:{display:true,text:'Z-Score (90d)',color:'#888',font:{size:10}}},
+        y1:{...baseScaleOpts,position:'right',grid:{drawOnChartArea:false},ticks:{...baseScaleOpts.ticks,color:COLORS.purple,callback:function(v){return'$'+v.toLocaleString();}},title:{display:true,text:'SOL Price',color:COLORS.purple,font:{size:10}}}}
+    },
+    plugins:[{id:'zBands',beforeDraw:function(chart){
+      var yScale=chart.scales.y,ca=chart.chartArea,ctx=chart.ctx;
+      if(!ca)return;ctx.save();
+      // +2σ band
+      var y2p=yScale.getPixelForValue(2),y2n=yScale.getPixelForValue(-2);
+      var yTop=Math.max(ca.top,Math.min(y2p,ca.bottom));
+      var yBot=Math.min(ca.bottom,Math.max(y2n,ca.top));
+      // shade above +2
+      ctx.fillStyle='rgba(255,74,106,0.04)';
+      ctx.fillRect(ca.left,ca.top,ca.right-ca.left,yTop-ca.top);
+      // shade below -2
+      ctx.fillRect(ca.left,yBot,ca.right-ca.left,ca.bottom-yBot);
+      // draw ±2 lines
+      ctx.setLineDash([4,4]);ctx.strokeStyle='rgba(255,74,106,0.3)';ctx.lineWidth=1;
+      ctx.beginPath();ctx.moveTo(ca.left,yTop);ctx.lineTo(ca.right,yTop);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(ca.left,yBot);ctx.lineTo(ca.right,yBot);ctx.stroke();
+      // labels
+      ctx.fillStyle='rgba(255,74,106,0.5)';ctx.font='bold 9px JetBrains Mono';
+      ctx.fillText('+2σ 이상신호',ca.left+6,yTop+12);
+      ctx.fillText('-2σ 이상신호',ca.left+6,yBot-6);
+      ctx.restore();
+    }}]
+  });
+  sendHeight();
+}
+setupTabs('zTabs',function(r){zRange=r;updateZScoreChart();});
+
+/* ===== SENTIMENT INDEX ===== */
+var sentimentChart=null,sentiRange='365';
+function calcSentiment(d){
+  var a=d.activating||0,da=d.deactivating||0;
+  var total=a+da;
+  return total>0?+(a/total*100).toFixed(1):50;
+}
+function getSentiColor(v){
+  if(v>=70)return COLORS.green;
+  if(v>=55)return'#42cc8c';
+  if(v>=45)return'#888';
+  if(v>=30)return'#ff8c42';
+  return COLORS.red;
+}
+function updateSentimentGauge(){
+  if(!DATA||!DATA.data||DATA.data.length<1)return;
+  // Use last 7 days average
+  var recent=DATA.data.slice(-7);
+  var vals=recent.map(calcSentiment);
+  var avg=+(vals.reduce(function(a,b){return a+b;},0)/vals.length).toFixed(1);
+  var color=getSentiColor(avg);
+  var label=avg>=70?'🟢 강한 강세':avg>=55?'강세 우위':avg>=45?'중립':avg>=30?'약세 우위':'🔴 강한 약세';
+  document.getElementById('gaugeValue').textContent=avg;
+  document.getElementById('gaugeValue').style.color=color;
+  document.getElementById('gaugeLabel').textContent=label+' (최근 7일 평균)';
+  var bar=document.getElementById('gaugeBar');
+  bar.style.width=avg+'%';
+  bar.style.background='linear-gradient(90deg,'+COLORS.red+',#ff8c42 30%,#888 50%,#42cc8c 70%,'+COLORS.green+')';
+}
+function updateSentimentChart(){
+  var fd=getFilteredData(sentiRange);
+  var labels=fd.map(function(d){return d.date;});
+  var sentiData=fd.map(calcSentiment);
+  // 7-day MA
+  var ma7=sentiData.map(function(v,i,arr){
+    if(i<6)return null;
+    var sum=0;for(var j=i-6;j<=i;j++)sum+=arr[j];return+(sum/7).toFixed(1);
+  });
+  if(sentimentChart)sentimentChart.destroy();
+
+  sentimentChart=new Chart(document.getElementById('sentimentChart').getContext('2d'),{
+    type:'line',data:{labels:labels,datasets:[
+      {label:'센티먼트 (일간)',data:sentiData,borderColor:'rgba(0,229,204,0.3)',backgroundColor:'transparent',fill:false,tension:0.3,pointRadius:0,borderWidth:1},
+      {label:'7일 이동평균',data:ma7,borderColor:COLORS.cyan,backgroundColor:'rgba(0,229,204,0.08)',fill:true,tension:0.3,pointRadius:0,borderWidth:2}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},
+      plugins:{legend:{labels:{color:'#6e6e88',boxWidth:10,padding:8,font:{size:9}}},
+        tooltip:{backgroundColor:'rgba(10,10,10,0.95)',titleColor:'#e5e5e5',bodyColor:'#8a8a8a',borderColor:'rgba(255,255,255,0.08)',borderWidth:1,cornerRadius:6,padding:10,
+          callbacks:{label:function(ctx){return ctx.dataset.label+': '+ctx.raw;}}}},
+      scales:{x:{...baseScaleOpts,ticks:{...baseScaleOpts.ticks,color:'#555'}},
+        y:{...baseScaleOpts,min:0,max:100,position:'left',
+          grid:{color:function(c){return c.tick.value===50?'rgba(255,255,255,0.15)':gridColor;},lineWidth:function(c){return c.tick.value===50?2:1;}},
+          ticks:{...baseScaleOpts.ticks,color:'#888',stepSize:25},title:{display:true,text:'Sentiment (0-100)',color:'#888',font:{size:10}}}}
+    },
+    plugins:[{id:'sentiBands',beforeDraw:function(chart){
+      var yScale=chart.scales.y,ca=chart.chartArea,ctx=chart.ctx;
+      if(!ca)return;ctx.save();
+      var y70=yScale.getPixelForValue(70),y30=yScale.getPixelForValue(30);
+      ctx.fillStyle='rgba(66,255,140,0.03)';ctx.fillRect(ca.left,ca.top,ca.right-ca.left,y70-ca.top);
+      ctx.fillStyle='rgba(255,74,106,0.03)';ctx.fillRect(ca.left,y30,ca.right-ca.left,ca.bottom-y30);
+      ctx.setLineDash([4,4]);ctx.lineWidth=1;
+      ctx.strokeStyle='rgba(66,255,140,0.2)';ctx.beginPath();ctx.moveTo(ca.left,y70);ctx.lineTo(ca.right,y70);ctx.stroke();
+      ctx.strokeStyle='rgba(255,74,106,0.2)';ctx.beginPath();ctx.moveTo(ca.left,y30);ctx.lineTo(ca.right,y30);ctx.stroke();
+      ctx.fillStyle='rgba(66,255,140,0.3)';ctx.font='bold 9px JetBrains Mono';ctx.fillText('강세',ca.right-30,y70+12);
+      ctx.fillStyle='rgba(255,74,106,0.3)';ctx.fillText('약세',ca.right-30,y30-6);
+      ctx.restore();
+    }}]
+  });
+  sendHeight();
+}
+setupTabs('sentiTabs',function(r){sentiRange=r;updateSentimentChart();});
 
 /* ===== IFRAME RESIZE ===== */
 var _lastH=0,_ht;
