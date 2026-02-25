@@ -410,8 +410,16 @@ def main():
     print(f"Parsed {len(stake_entries)} epoch entries")
     print(f"Epoch range: {stake_entries[0]['epoch']} ~ {stake_entries[-1]['epoch']}")
     
-    # 3. Fetch SOL prices
-    price_map = fetch_sol_price_history(days=365)
+    # 3. Fetch SOL prices (historical base + CoinGecko recent)
+    price_map = {}
+    hist_file = os.path.join(os.path.dirname(OUTPUT_FILE), 'sol_prices_hist.json')
+    if os.path.exists(hist_file):
+        with open(hist_file) as f:
+            price_map = json.load(f)
+        print(f"Loaded {len(price_map)} historical prices from sol_prices_hist.json")
+    cg_prices = fetch_sol_price_history(days=365)
+    price_map.update(cg_prices)
+    print(f"Total price points: {len(price_map)}")
     
     # 4. Build output
     output = build_output(stake_entries, price_map, epoch_info)
