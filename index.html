@@ -290,10 +290,8 @@ var _PRICE_MAP={"2020-04-11":0.96,"2020-04-12":0.78,"2020-04-13":0.88,"2020-04-1
 
 function mergePrices(d){
   if(!d||!d.data)return;
-  var hasPrice=d.data.some(function(x){return x.solPrice>1;});
-  if(!hasPrice){
-    d.data.forEach(function(x){x.solPrice=_PRICE_MAP[x.date]||0;});
-  }
+  d.data.forEach(function(x){if(!x.solPrice||x.solPrice<1){x.solPrice=_PRICE_MAP[x.date]||0;}});
+  var last=0;d.data.forEach(function(x){if(x.solPrice>1)last=x.solPrice;else if(last>0)x.solPrice=last;});
 }
 
 async function loadData(){
