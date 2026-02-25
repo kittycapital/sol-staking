@@ -147,7 +147,7 @@ def epoch_to_approximate_date(epoch, current_epoch, current_date):
     return approx_date.strftime('%Y-%m-%d')
 
 
-def fetch_sol_price_history(days=1100):
+def fetch_sol_price_history(days=365):
     """Fetch SOL price history from CoinGecko."""
     prices = {}
     
@@ -262,7 +262,7 @@ def build_output(stake_entries, price_map, epoch_info):
     if data:
         from datetime import timedelta
         last_entry = data[-1]
-        last_date = datetime.strptime(last_entry['date'], '%Y-%m-%d')
+        last_date = datetime.strptime(last_entry['date'], '%Y-%m-%d').replace(tzinfo=timezone.utc)
         today = current_date.replace(hour=0, minute=0, second=0, microsecond=0)
         gap_days = (today - last_date).days
         if gap_days > 0:
@@ -411,7 +411,7 @@ def main():
     print(f"Epoch range: {stake_entries[0]['epoch']} ~ {stake_entries[-1]['epoch']}")
     
     # 3. Fetch SOL prices
-    price_map = fetch_sol_price_history(days=1200)
+    price_map = fetch_sol_price_history(days=365)
     
     # 4. Build output
     output = build_output(stake_entries, price_map, epoch_info)
