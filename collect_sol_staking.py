@@ -247,6 +247,36 @@ def build_output(stake_entries, price_map, epoch_info):
             unique_data.append(d)
     data = unique_data
     
+    # Fill gap from last data point to today
+    if data:
+        from datetime import timedelta
+        last_entry = data[-1]
+        last_date = datetime.strptime(last_entry['date'], '%Y-%m-%d')
+        today = current_date.replace(hour=0, minute=0, second=0, microsecond=0)
+        gap_days = (today - last_date).days
+        if gap_days > 0:
+            print(f"Filling {gap_days} day gap from {last_entry['date']} to today")
+            for i in range(1, gap_days + 1):
+                fill_date = (last_date + timedelta(days=i)).strftime('%Y-%m-%d')
+                fill_price = price_map.get(fill_date, last_entry['solPrice'])
+                data.append({
+                    'date': fill_date,
+                    'epoch': last_entry['epoch'],
+                    'activating': last_entry['activating'],
+                    'deactivating': last_entry['deactivating'],
+                    'effective': last_entry.get('effective', 0),
+                    'netFlow': last_entry['netFlow'],
+                    'solPrice': fill_price if fill_price > 0 else last_entry['solPrice']
+                })
+    
+    # Forward-fill any remaining price gaps
+    last_price = 0
+    for d in data:
+        if d['solPrice'] > 1:
+            last_price = d['solPrice']
+        elif last_price > 0:
+            d['solPrice'] = last_price
+    
     # Calculate stats
     if data:
         latest = data[-1]
