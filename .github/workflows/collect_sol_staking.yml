@@ -2,8 +2,8 @@ name: Collect SOL Staking Data
 
 on:
   schedule:
-    # Every 6 hours (roughly matches epoch boundary ~2.4 days)
-    - cron: '0 */6 * * *'
+    # 하루 1회 실행 (UTC 00:00 = KST 09:00)
+    - cron: '0 0 * * *'
   workflow_dispatch:  # Manual trigger
 
 jobs:
